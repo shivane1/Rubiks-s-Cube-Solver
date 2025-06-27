@@ -1,72 +1,95 @@
 # 🧊 Rubik’s Cube Solver using Computer Vision & Python
 
-This project is a real-time **Rubik’s Cube Solver** that uses a webcam to scan a real cube, classify each sticker's color, solve it using the **Kociemba algorithm**, and visualize the solution step-by-step with an overlay and a 2D state viewer.
+A real-time **Rubik’s Cube Solver** that uses your webcam to:
+
+1. Scan each face of a real cube  
+2. Classify sticker colors with HSV thresholds  
+3. Solve the cube using the [Kociemba two-phase algorithm](https://github.com/hkociemba/RubiksCube-TwophaseSolver)  
+4. Guide you through each move with 2D overlays and a separate viewer  
 
 ---
 
 ## 🎥 Features
 
-- 🎥 Webcam-based scanning of all 6 cube faces
-- 🌈 HSV-based color classification of stickers
-- 🧠 Solves cube using the [Kociemba two-phase algorithm](https://github.com/hkociemba/RubiksCube-TwophaseSolver)
-- ➡️ Visual move guidance using arrow overlays
-- 🔁 Real-time cube state tracking after every move
-- 🖥️ Separate viewer window displaying cube state via sockets
+- **Webcam scanning** of all 6 faces  
+- **HSV-based color classification**  
+- **Kociemba solver** via the `kociemba` Python package  
+- **Arrow overlays** for visual move guidance  
+- **Real-time state tracking** after every move  
+- **Separate viewer window** rendering the cube state via sockets  
 
 ---
 
 ## 🧰 Tech Stack & Libraries
 
-- **Python 3.x**
-- [`OpenCV`](https://opencv.org/) – Camera input, image display, overlays
-- [`NumPy`](https://numpy.org/) – Numerical operations
-- [`kociemba`](https://pypi.org/project/kociemba/) – Rubik’s Cube solving algorithm
-- `socket` – Real-time communication between solver and viewer
-- `pickle` – Serializing cube state data
-- `os`, `copy` – Standard library utilities
+- **Python 3.10.8**  
+- **[OpenCV](https://opencv.org/)** – Camera capture, image display, overlays  
+- **[NumPy](https://numpy.org/)** – Numerical operations  
+- **[kociemba](https://pypi.org/project/kociemba/)** – Cube solving algorithm  
+- **socket** – Real-time communication between solver and viewer  
+- **pickle** – Serializing cube state data  
+- **os**, **copy** – Standard library utilities  
 
 ---
 
 ## 📁 Project Structure
-├── Main.py # Main script for scanning, solving, and guiding
-├── State.py # Viewer script for rendering the current cube state
-├── resources/ # Folder containing arrow images and color tiles
-│ ├── colors/ # Individual sticker images by color
-│ ├── U.png, R.png, ... # Arrows for each move
 
+```
+rubiks-cube-solver/
+│
+├── Main.py       # Main script: scanning, solving & overlay guidance  
+├── State.py      # Viewer script: renders current cube state  
+├── resources/    # Static assets
+│   ├── colors/   # PNG tiles for each sticker color (W, Y, R, O, G, B)
+│   ├── U.png      # Arrow overlay images for each move (e.g., U, R, F, etc.)
+│   └── …          # Other move arrow PNGs  
+└── README.md     # This file  
+```
 
 ---
 
-## 🚀 How to Run
+## 🚀 Getting Started
 
-### 1. Clone the repository
+1. **Clone the repository**  
+   ```bash
+   git clone https://github.com/Goddbott/Rubiks-s-Cube-Solver.git
+   cd Rubiks-s-Cube-Solver
+   ```
 
-```bash
-git clone https://github.com/Goddbott/Rubiks-s-Cube-Solver
-cd rubiks-cube-solver
+2. **Install dependencies**  
+   ```bash
+   pip install opencv-python numpy kociemba
+   ```
 
-2. Install dependencies
-pip install opencv-python numpy kociemba
+3. **Run the viewer** (in one terminal)  
+   ```bash
+   python State.py
+   ```
 
-3. Run the viewer (in one terminal)
-python State.py
+4. **Run the solver** (in another terminal)  
+   ```bash
+   python Main.py
+   ```
 
-4. Run the solver (in another terminal)
-python temp.py
+---
 
-🎮 Controls in temp.py
-Press U, R, F, D, L, B to scan the respective face
+## 🎮 Controls
 
-Press ESC when all 6 faces are scanned
+- **During scanning (Main.py)**  
+  - Press `U`, `R`, `F`, `D`, `L`, `B` to scan that face  
+  - Press `ESC` once all six faces are scanned  
 
-During solving, press SPACE to confirm each move
+- **During solving**  
+  - Press `SPACE` to confirm each move  
+  - Press `ESC` to exit at any time  
 
-Press ESC to exit at any time
+---
 
-📸 Resources
-resources/colors/: PNGs for W, Y, R, O, G, B tiles
+## 📸 Resources
 
-resources/*.png: Overlay arrows for moves (R.png, U'.png, etc.)
+- `resources/colors/` – Sticker tiles for white, yellow, red, orange, green, blue  
+- `resources/*.png` – Overlay arrows for each face turn (e.g., `R.png`, `U'.png`, etc.)  
 
-Built with ❤️ by Aditya Ajay
+---
 
+Built with ❤️ by **Aditya Ajay**
