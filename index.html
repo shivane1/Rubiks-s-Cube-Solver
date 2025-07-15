@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rubik's Cube Solver - OpenCV Edition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <header class="header">
+                <div class="logo-section">
+                    <div class="cube-icon">
+                        <div class="mini-cube"></div>
+                    </div>
+                    <div class="title-group">
+                        <h1 class="main-title">Rubik's Cube Solver</h1>
+                        <p class="subtitle">Computer Vision & AI Powered</p>
+                        <p class="credits">Designed by <span class="highlight">Shivane</span> and <span class="highlight">Arpit</span></p>
+                    </div>
+                </div>
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span class="status-text">Ready to Scan</span>
+                </div>
+            </header>
+
+            <main class="main-content">
+                <div class="cube-section">
+                    <div class="cube-container">
+                        <div id="cube-3d"></div>
+                        <div class="cube-controls">
+                            <button class="control-btn" id="rotate-x">↻ X</button>
+                            <button class="control-btn" id="rotate-y">↻ Y</button>
+                            <button class="control-btn" id="rotate-z">↻ Z</button>
+                            <button class="control-btn primary" id="reset-view">Reset View</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="info-section">
+                    <div class="scan-progress">
+                        <h3>Scanning Progress</h3>
+                        <div class="face-grid">
+                            <div class="face-item" data-face="U">
+                                <div class="face-preview"></div>
+                                <span>Up (U)</span>
+                                <div class="scan-status">⏳</div>
+                            </div>
+                            <div class="face-item" data-face="R">
+                                <div class="face-preview"></div>
+                                <span>Right (R)</span>
+                                <div class="scan-status">⏳</div>
+                            </div>
+                            <div class="face-item" data-face="F">
+                                <div class="face-preview"></div>
+                                <span>Front (F)</span>
+                                <div class="scan-status">⏳</div>
+                            </div>
+                            <div class="face-item" data-face="D">
+                                <div class="face-preview"></div>
+                                <span>Down (D)</span>
+                                <div class="scan-status">⏳</div>
+                            </div>
+                            <div class="face-item" data-face="L">
+                                <div class="face-preview"></div>
+                                <span>Left (L)</span>
+                                <div class="scan-status">⏳</div>
+                            </div>
+                            <div class="face-item" data-face="B">
+                                <div class="face-preview"></div>
+                                <span>Back (B)</span>
+                                <div class="scan-status">⏳</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="solution-panel">
+                        <h3>Solution Steps</h3>
+                        <div class="steps-container">
+                            <div class="step-item current">
+                                <div class="step-number">1</div>
+                                <div class="step-content">
+                                    <div class="step-move">R U R'</div>
+                                    <div class="step-description">Right face clockwise, Up clockwise, Right counterclockwise</div>
+                                </div>
+                                <div class="step-progress">
+                                    <div class="progress-bar"></div>
+                                </div>
+                            </div>
+                            <div class="step-item">
+                                <div class="step-number">2</div>
+                                <div class="step-content">
+                                    <div class="step-move">F R F'</div>
+                                    <div class="step-description">Front clockwise, Right clockwise, Front counterclockwise</div>
+                                </div>
+                                <div class="step-progress">
+                                    <div class="progress-bar"></div>
+                                </div>
+                            </div>
+                            <div class="step-item">
+                                <div class="step-number">3</div>
+                                <div class="step-content">
+                                    <div class="step-move">U D' R</div>
+                                    <div class="step-description">Up clockwise, Down counterclockwise, Right clockwise</div>
+                                </div>
+                                <div class="step-progress">
+                                    <div class="progress-bar"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <div class="action-bar">
+                <button class="action-btn secondary" id="scan-btn">
+                    <span class="btn-icon">📷</span>
+                    Start Scanning
+                </button>
+                <button class="action-btn primary" id="solve-btn" disabled>
+                    <span class="btn-icon">🧠</span>
+                    Solve Cube
+                </button>
+                <button class="action-btn secondary" id="reset-btn">
+                    <span class="btn-icon">🔄</span>
+                    Reset
+                </button>
+            </div>
+
+            <div class="tech-info">
+                <div class="tech-item">
+                    <div class="tech-icon">🎥</div>
+                    <div class="tech-details">
+                        <div class="tech-title">OpenCV Vision</div>
+                        <div class="tech-desc">Real-time color detection</div>
+                    </div>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-icon">🧮</div>
+                    <div class="tech-details">
+                        <div class="tech-title">Kociemba Algorithm</div>
+                        <div class="tech-desc">Two-phase solving method</div>
+                    </div>
+                </div>
+                <div class="tech-item">
+                    <div class="tech-icon">⚡</div>
+                    <div class="tech-details">
+                        <div class="tech-title">Real-time Processing</div>
+                        <div class="tech-desc">Instant move guidance</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="background-animation">
+            <div class="floating-cube cube-1"></div>
+            <div class="floating-cube cube-2"></div>
+            <div class="floating-cube cube-3"></div>
+            <div class="floating-cube cube-4"></div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>
