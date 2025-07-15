@@ -42,74 +42,32 @@
                 </div>
 
                 <div class="info-section">
-                    <div class="scan-progress">
-                        <h3>Scanning Progress</h3>
-                        <div class="face-grid">
-                            <div class="face-item" data-face="U">
-                                <div class="face-preview"></div>
-                                <span>Up (U)</span>
-                                <div class="scan-status">⏳</div>
-                            </div>
-                            <div class="face-item" data-face="R">
-                                <div class="face-preview"></div>
-                                <span>Right (R)</span>
-                                <div class="scan-status">⏳</div>
-                            </div>
-                            <div class="face-item" data-face="F">
-                                <div class="face-preview"></div>
-                                <span>Front (F)</span>
-                                <div class="scan-status">⏳</div>
-                            </div>
-                            <div class="face-item" data-face="D">
-                                <div class="face-preview"></div>
-                                <span>Down (D)</span>
-                                <div class="scan-status">⏳</div>
-                            </div>
-                            <div class="face-item" data-face="L">
-                                <div class="face-preview"></div>
-                                <span>Left (L)</span>
-                                <div class="scan-status">⏳</div>
-                            </div>
-                            <div class="face-item" data-face="B">
-                                <div class="face-preview"></div>
-                                <span>Back (B)</span>
-                                <div class="scan-status">⏳</div>
-                            </div>
+                    <div class="instructions-panel">
+                        <h3>📋 Instructions</h3>
+                        <div class="instruction-item">
+                            <div class="instruction-icon">1</div>
+                            <span>Run your OpenCV Python solver (Main.py)</span>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-icon">2</div>
+                            <span>Scan your cube using the camera interface</span>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-icon">3</div>
+                            <span>Click "Next Move" or press SPACE to see each step</span>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-icon">4</div>
+                            <span>Follow the visual move guidance to solve your cube</span>
                         </div>
                     </div>
 
                     <div class="solution-panel">
-                        <h3>Solution Steps</h3>
+                        <h3>Solution Steps <span class="step-counter">Waiting for solution...</span></h3>
                         <div class="steps-container">
-                            <div class="step-item current">
-                                <div class="step-number">1</div>
-                                <div class="step-content">
-                                    <div class="step-move">R U R'</div>
-                                    <div class="step-description">Right face clockwise, Up clockwise, Right counterclockwise</div>
-                                </div>
-                                <div class="step-progress">
-                                    <div class="progress-bar"></div>
-                                </div>
-                            </div>
-                            <div class="step-item">
-                                <div class="step-number">2</div>
-                                <div class="step-content">
-                                    <div class="step-move">F R F'</div>
-                                    <div class="step-description">Front clockwise, Right clockwise, Front counterclockwise</div>
-                                </div>
-                                <div class="step-progress">
-                                    <div class="progress-bar"></div>
-                                </div>
-                            </div>
-                            <div class="step-item">
-                                <div class="step-number">3</div>
-                                <div class="step-content">
-                                    <div class="step-move">U D' R</div>
-                                    <div class="step-description">Up clockwise, Down counterclockwise, Right clockwise</div>
-                                </div>
-                                <div class="step-progress">
-                                    <div class="progress-bar"></div>
-                                </div>
+                            <div class="waiting-message">
+                                <p>🔄 Waiting for cube solution from OpenCV solver...</p>
+                                <p style="font-size: 0.9rem; color: #666; margin-top: 10px;">Make sure your Python solver is running and has scanned the cube.</p>
                             </div>
                         </div>
                     </div>
@@ -117,13 +75,9 @@
             </main>
 
             <div class="action-bar">
-                <button class="action-btn secondary" id="scan-btn">
-                    <span class="btn-icon">📷</span>
-                    Start Scanning
-                </button>
-                <button class="action-btn primary" id="solve-btn" disabled>
-                    <span class="btn-icon">🧠</span>
-                    Solve Cube
+                <button class="action-btn primary" id="next-move-btn" disabled>
+                    <span class="btn-icon">▶️</span>
+                    Next Move (SPACE)
                 </button>
                 <button class="action-btn secondary" id="reset-btn">
                     <span class="btn-icon">🔄</span>
@@ -154,6 +108,12 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Move Overlay -->
+        <div class="move-overlay">
+            <div class="current-move">R</div>
+            <div class="move-description">Right face clockwise</div>
         </div>
 
         <div class="background-animation">
