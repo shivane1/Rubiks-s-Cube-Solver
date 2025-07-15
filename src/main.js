@@ -15,16 +15,24 @@ class CubeSolverInterface {
         this.socket = null;
         this.cubeState = null;
         
+        // Camera scanning
+        this.videoStream = null;
+        this.isScanning = false;
+        this.scannedFaces = {};
+        this.currentScanFace = null;
+        this.scanningOrder = ['U', 'R', 'F', 'D', 'L', 'B'];
+        this.currentFaceIndex = 0;
+        
         this.init();
         this.setupEventListeners();
         this.startAnimations();
-        this.connectToSolver();
     }
 
     init() {
         this.setupThreeJS();
         this.createCube();
         this.animate();
+        this.updateScanProgress();
     }
 
     setupThreeJS() {
@@ -118,56 +126,294 @@ class CubeSolverInterface {
         this.scene.add(this.cube);
     }
 
-    updateCubeColors(cubeState) {
-        if (!cubeState) return;
+    async startCameraScanning() {
+        try {
+            this.videoStream = await navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    facingMode: 'environment' // Use back camera on mobile
+                } 
+            });
+            
+            const videoElement = document.getElementById('camera-feed');
+            videoElement.srcObject = this.videoStream;
+            
+            this.isScanning = true;
+            this.currentFaceIndex = 0;
+            this.currentScanFace = this.scanningOrder[0];
+            
+            this.updateScanningUI();
+            this.showCameraInterface();
+            this.startColorDetection();
+            
+            this.updateStatus('scanning', 'Scanning cube faces...');
+            
+        } catch (error) {
+            console.error('Error accessing camera:', error);
+            alert('Could not access camera. Please ensure camera permissions are granted.');
+        }
+    }
+
+    showCameraInterface() {
+        const cameraModal = document.getElementById('camera-modal');
+        cameraModal.classList.add('active');
         
-        const colors = {
-            'W': 0xffffff,
-            'Y': 0xffff00,
-            'R': 0xff0000,
-            'O': 0xff8800,
-            'G': 0x00ff00,
-            'B': 0x0000ff
+        // Add scanning grid overlay
+        this.addScanningGrid();
+    }
+
+    addScanningGrid() {
+        const overlay = document.querySelector('.camera-overlay');
+        overlay.innerHTML = `
+            <div class="scanning-grid">
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell center"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+                <div class="grid-cell"></div>
+            </div>
+            <div class="scan-instruction">
+                <h3>Scanning Face: ${this.currentScanFace}</h3>
+                <p>Align the ${this.getFaceName(this.currentScanFace)} face with the grid</p>
+                <div class="scan-progress-bar">
+                    <div class="progress" style="width: ${(this.currentFaceIndex / 6) * 100}%"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    startColorDetection() {
+        const videoElement = document.getElementById('camera-feed');
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        canvas.width = 640;
+        canvas.height = 480;
+        
+        const detectColors = () => {
+            if (!this.isScanning) return;
+            
+            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+            
+            // Sample colors from 3x3 grid positions
+            const colors = [];
+            const gridSize = 3;
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const spacing = 60;
+            
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    const x = centerX + (j - 1) * spacing;
+                    const y = centerY + (i - 1) * spacing;
+                    
+                    const imageData = ctx.getImageData(x, y, 1, 1);
+                    const [r, g, b] = imageData.data;
+                    
+                    // Convert RGB to HSV and classify color
+                    const color = this.classifyColor(r, g, b);
+                    colors.push(color);
+                    
+                    // Update grid cell color
+                    const cellIndex = i * 3 + j;
+                    const gridCells = document.querySelectorAll('.grid-cell');
+                    if (gridCells[cellIndex]) {
+                        gridCells[cellIndex].style.backgroundColor = this.getColorHex(color);
+                        gridCells[cellIndex].textContent = color;
+                    }
+                }
+            }
+            
+            // Store the detected colors for this face
+            this.scannedFaces[this.currentScanFace] = colors;
+            
+            requestAnimationFrame(detectColors);
         };
         
-        // Update cube colors based on the received state
-        // This would need to be adapted based on your cube state format
-        this.cubelets.forEach((cubelet, index) => {
-            const { x, y, z } = cubelet.userData.gridPosition;
-            
-            // Update materials based on cube state
-            // You'll need to map your cube state to the 3D positions
-            cubelet.material.forEach((material, faceIndex) => {
-                // This is a simplified example - you'll need to implement
-                // the actual mapping from your cube state to face colors
-                if (cubeState && cubeState.faces) {
-                    // Update based on your actual cube state structure
-                }
-            });
+        videoElement.addEventListener('loadedmetadata', () => {
+            detectColors();
         });
     }
 
-    animate() {
-        requestAnimationFrame(() => this.animate());
+    classifyColor(r, g, b) {
+        // Convert RGB to HSV
+        const max = Math.max(r, g, b);
+        const min = Math.min(r, g, b);
+        const diff = max - min;
         
-        // Gentle rotation when not showing specific moves
-        if (!this.isShowingMove) {
-            this.cube.rotation.y += 0.003;
-            this.cube.rotation.x += 0.001;
+        let h = 0;
+        if (diff !== 0) {
+            if (max === r) h = ((g - b) / diff) % 6;
+            else if (max === g) h = (b - r) / diff + 2;
+            else h = (r - g) / diff + 4;
         }
+        h = Math.round(h * 60);
+        if (h < 0) h += 360;
         
-        this.renderer.render(this.scene, this.camera);
+        const s = max === 0 ? 0 : Math.round((diff / max) * 100);
+        const v = Math.round((max / 255) * 100);
+        
+        // Color classification based on HSV values (similar to your Python code)
+        if (h >= 5 && h <= 36 && s >= 9 && s <= 60 && v >= 45 && v <= 179) return "W";
+        if (h >= 0 && h <= 25 && s >= 156 && s <= 232 && v >= 82 && v <= 143) return "R";
+        if (h >= 28 && h <= 39 && s >= 146 && s <= 255 && v >= 132 && v <= 194) return "Y";
+        if (h >= 42 && h <= 160 && s >= 133 && s <= 255 && v >= 97 && v <= 190) return "G";
+        if (h >= 55 && h <= 121 && s >= 129 && s <= 255 && v >= 26 && v <= 84) return "B";
+        if (h >= 1 && h <= 85 && s >= 211 && s <= 248 && v >= 75 && v <= 148) return "O";
+        return "O"; // Default
     }
 
-    connectToSolver() {
-        // Simulate connection to Python solver
-        // In a real implementation, you might use WebSockets or HTTP polling
-        this.updateConnectionStatus(true);
+    getColorHex(colorCode) {
+        const colors = {
+            'W': '#ffffff',
+            'Y': '#ffff00',
+            'R': '#ff0000',
+            'O': '#ff8800',
+            'G': '#00ff00',
+            'B': '#0000ff'
+        };
+        return colors[colorCode] || '#666666';
+    }
+
+    getFaceName(face) {
+        const names = {
+            'U': 'Up/Top',
+            'R': 'Right',
+            'F': 'Front',
+            'D': 'Down/Bottom',
+            'L': 'Left',
+            'B': 'Back'
+        };
+        return names[face] || face;
+    }
+
+    captureFace() {
+        if (!this.currentScanFace || !this.scannedFaces[this.currentScanFace]) return;
         
-        // Simulate receiving solution steps
-        setTimeout(() => {
-            this.receiveSolution("R U R' U' R U R' F' R U R' U' R' F R");
-        }, 2000);
+        // Mark face as captured
+        const faceItem = document.querySelector(`[data-face="${this.currentScanFace}"]`);
+        if (faceItem) {
+            faceItem.classList.add('scanned');
+            faceItem.querySelector('.scan-status').textContent = '✅';
+            
+            // Update face preview
+            const preview = faceItem.querySelector('.face-preview');
+            const colors = this.scannedFaces[this.currentScanFace];
+            colors.forEach((color, index) => {
+                const sticker = preview.children[index];
+                if (sticker) {
+                    sticker.style.backgroundColor = this.getColorHex(color);
+                }
+            });
+        }
+        
+        // Move to next face
+        this.currentFaceIndex++;
+        if (this.currentFaceIndex < this.scanningOrder.length) {
+            this.currentScanFace = this.scanningOrder[this.currentFaceIndex];
+            this.addScanningGrid();
+        } else {
+            this.completeScan();
+        }
+    }
+
+    completeScan() {
+        this.isScanning = false;
+        this.closeCameraInterface();
+        
+        // Build cube string for solver
+        const cubeString = this.buildCubeString();
+        console.log('Cube string:', cubeString);
+        
+        this.updateStatus('solving', 'Solving cube...');
+        this.solveCube(cubeString);
+    }
+
+    buildCubeString() {
+        // Convert scanned faces to cube string format
+        const faceOrder = ['U', 'R', 'F', 'D', 'L', 'B'];
+        let cubeString = '';
+        
+        // Create color to face mapping based on center pieces
+        const colorToFace = {};
+        faceOrder.forEach(face => {
+            if (this.scannedFaces[face]) {
+                const centerColor = this.scannedFaces[face][4]; // Center piece is at index 4
+                colorToFace[centerColor] = face;
+            }
+        });
+        
+        // Build cube string
+        faceOrder.forEach(face => {
+            if (this.scannedFaces[face]) {
+                this.scannedFaces[face].forEach(color => {
+                    cubeString += colorToFace[color] || '?';
+                });
+            }
+        });
+        
+        return cubeString;
+    }
+
+    async solveCube(cubeString) {
+        try {
+            // In a real implementation, you would send this to your Python solver
+            // For now, we'll simulate a solution
+            setTimeout(() => {
+                const mockSolution = "R U R' U' R U R' F' R U R' U' R' F R";
+                this.receiveSolution(mockSolution);
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Error solving cube:', error);
+            this.updateStatus('error', 'Error solving cube');
+        }
+    }
+
+    closeCameraInterface() {
+        const cameraModal = document.getElementById('camera-modal');
+        cameraModal.classList.remove('active');
+        
+        if (this.videoStream) {
+            this.videoStream.getTracks().forEach(track => track.stop());
+            this.videoStream = null;
+        }
+    }
+
+    updateScanningUI() {
+        // Remove scanning class from all faces
+        document.querySelectorAll('.face-item').forEach(item => {
+            item.classList.remove('scanning');
+        });
+        
+        // Add scanning class to current face
+        if (this.currentScanFace) {
+            const currentFaceItem = document.querySelector(`[data-face="${this.currentScanFace}"]`);
+            if (currentFaceItem) {
+                currentFaceItem.classList.add('scanning');
+            }
+        }
+    }
+
+    updateScanProgress() {
+        const faceItems = document.querySelectorAll('.face-item');
+        faceItems.forEach(item => {
+            const face = item.dataset.face;
+            const preview = item.querySelector('.face-preview');
+            
+            // Create 9 stickers for 3x3 grid
+            preview.innerHTML = '';
+            for (let i = 0; i < 9; i++) {
+                const sticker = document.createElement('div');
+                sticker.className = 'sticker';
+                preview.appendChild(sticker);
+            }
+        });
     }
 
     receiveSolution(solutionString) {
@@ -175,6 +421,7 @@ class CubeSolverInterface {
         this.currentStep = 0;
         this.displaySolutionSteps();
         this.updateUI();
+        this.updateStatus('ready', 'Ready to solve!');
     }
 
     displaySolutionSteps() {
@@ -381,11 +628,7 @@ class CubeSolverInterface {
     }
 
     showCompletionMessage() {
-        const statusText = document.querySelector('.status-text');
-        const statusDot = document.querySelector('.status-dot');
-        
-        statusText.textContent = 'Cube Solved! 🎉';
-        statusDot.classList.add('solved');
+        this.updateStatus('solved', 'Cube Solved! 🎉');
         
         // Show completion overlay
         const completionOverlay = document.createElement('div');
@@ -426,32 +669,41 @@ class CubeSolverInterface {
         });
     }
 
-    updateConnectionStatus(connected) {
-        this.isConnected = connected;
+    updateStatus(type, message) {
         const statusText = document.querySelector('.status-text');
         const statusDot = document.querySelector('.status-dot');
         
-        if (connected) {
-            statusText.textContent = 'Connected to OpenCV Solver';
-            statusDot.classList.add('connected');
-        } else {
-            statusText.textContent = 'Connecting to Solver...';
-            statusDot.classList.remove('connected');
-        }
+        statusText.textContent = message;
+        
+        // Remove all status classes
+        statusDot.classList.remove('scanning', 'ready', 'solving', 'solved', 'error');
+        statusDot.classList.add(type);
     }
 
     updateUI() {
         const nextBtn = document.getElementById('next-move-btn');
-        const resetBtn = document.getElementById('reset-btn');
+        const solveBtn = document.getElementById('solve-btn');
         
         nextBtn.disabled = false;
-        resetBtn.disabled = false;
+        solveBtn.disabled = true;
         
         // Update step counter
         const stepCounter = document.querySelector('.step-counter');
         if (stepCounter) {
-            stepCounter.textContent = `Step ${this.currentStep + 1} of ${this.currentSolution.length}`;
+            stepCounter.textContent = `Step 1 of ${this.currentSolution.length}`;
         }
+    }
+
+    animate() {
+        requestAnimationFrame(() => this.animate());
+        
+        // Gentle rotation when not showing specific moves
+        if (!this.isShowingMove) {
+            this.cube.rotation.y += 0.003;
+            this.cube.rotation.x += 0.001;
+        }
+        
+        this.renderer.render(this.scene, this.camera);
     }
 
     setupEventListeners() {
@@ -473,14 +725,27 @@ class CubeSolverInterface {
         });
         
         // Action buttons
+        document.getElementById('scan-btn').addEventListener('click', () => this.startCameraScanning());
+        document.getElementById('solve-btn').addEventListener('click', () => this.solveCube());
         document.getElementById('next-move-btn').addEventListener('click', () => this.showNextMove());
         document.getElementById('reset-btn').addEventListener('click', () => location.reload());
+        
+        // Camera controls
+        document.getElementById('capture-face').addEventListener('click', () => this.captureFace());
+        document.getElementById('close-camera').addEventListener('click', () => this.closeCameraInterface());
         
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space') {
                 e.preventDefault();
-                this.showNextMove();
+                if (this.isScanning) {
+                    this.captureFace();
+                } else {
+                    this.showNextMove();
+                }
+            }
+            if (e.code === 'Escape' && this.isScanning) {
+                this.closeCameraInterface();
             }
         });
         

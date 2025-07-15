@@ -73,7 +73,7 @@
                     </div>
                 </div>
             </main>
-
+                    Scan Cube with Camera
             <div class="action-bar">
                 <button class="action-btn primary" id="next-move-btn" disabled>
                     <span class="btn-icon">▶️</span>
@@ -106,6 +106,24 @@
                         <div class="tech-title">Real-time Processing</div>
                         <div class="tech-desc">Instant move guidance</div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Camera Modal -->
+        <div class="camera-modal" id="camera-modal">
+            <div class="camera-container">
+                <video id="camera-feed" autoplay playsinline></video>
+                <div class="camera-overlay">
+                    <!-- Scanning grid and instructions will be added dynamically -->
+                </div>
+                <div class="camera-controls">
+                    <button class="camera-btn primary" id="capture-face">
+                        📸 Capture Face (SPACE)
+                    </button>
+                    <button class="camera-btn secondary" id="close-camera">
+                        ❌ Close (ESC)
+                    </button>
                 </div>
             </div>
         </div>

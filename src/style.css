@@ -128,6 +128,11 @@ body {
     animation: celebration 2s infinite;
 }
 
+.status-dot.error {
+    background: #ff4444;
+    animation: error 1s infinite;
+}
+
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
@@ -145,9 +150,172 @@ body {
     75% { transform: scale(1.1); }
 }
 
+@keyframes error {
+    0%, to { transform: scale(1); }
+    50% { transform: scale(1.2); background: #ff6666; }
+}
+
 .status-text {
     font-weight: 500;
     color: #ffffff;
+}
+
+/* Camera Interface */
+.camera-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.camera-modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.camera-container {
+    position: relative;
+    max-width: 90vw;
+    max-height: 90vh;
+    background: #1a1a2e;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 2px solid #4a90e2;
+}
+
+#camera-feed {
+    width: 640px;
+    height: 480px;
+    object-fit: cover;
+    display: block;
+}
+
+.camera-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.scanning-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 4px;
+    width: 180px;
+    height: 180px;
+    margin-bottom: 20px;
+}
+
+.grid-cell {
+    border: 2px solid #4a90e2;
+    background: rgba(74, 144, 226, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.8rem;
+    color: #fff;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    transition: all 0.3s ease;
+}
+
+.grid-cell.center {
+    border-color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.2);
+    box-shadow: 0 0 20px rgba(255, 107, 107, 0.5);
+}
+
+.scan-instruction {
+    text-align: center;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 20px;
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.scan-instruction h3 {
+    font-size: 1.5rem;
+    margin-bottom: 10px;
+    color: #4a90e2;
+}
+
+.scan-instruction p {
+    font-size: 1rem;
+    color: #fff;
+    margin-bottom: 15px;
+}
+
+.scan-progress-bar {
+    width: 200px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 0 auto;
+}
+
+.scan-progress-bar .progress {
+    height: 100%;
+    background: linear-gradient(90deg, #4a90e2, #7b68ee);
+    transition: width 0.3s ease;
+}
+
+.camera-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 15px;
+    pointer-events: all;
+}
+
+.camera-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 25px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.camera-btn.primary {
+    background: linear-gradient(135deg, #4a90e2, #7b68ee);
+    color: #fff;
+}
+
+.camera-btn.primary:hover {
+    background: linear-gradient(135deg, #5ba0f2, #8b78fe);
+    transform: translateY(-2px);
+}
+
+.camera-btn.secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.camera-btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
 }
 
 /* Main Content */
@@ -517,6 +685,16 @@ body {
     font-size: 1.2rem;
 }
 
+.waiting-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: #a0a0a0;
+}
+
+.waiting-message p {
+    margin-bottom: 10px;
+}
+
 /* Instructions Panel */
 .instructions-panel {
     background: rgba(255, 255, 255, 0.05);
@@ -690,6 +868,16 @@ body {
         font-size: 1.8rem;
     }
     
+    #camera-feed {
+        width: 100%;
+        height: auto;
+        max-width: 480px;
+    }
+    
+    .camera-container {
+        max-width: 95vw;
+    }
+    
     .current-move {
         font-size: 2rem;
     }
@@ -716,6 +904,16 @@ body {
     
     .subtitle {
         font-size: 1rem;
+    }
+    
+    .scanning-grid {
+        width: 150px;
+        height: 150px;
+    }
+    
+    .camera-controls {
+        flex-direction: column;
+        align-items: center;
     }
     
     .step-move {
