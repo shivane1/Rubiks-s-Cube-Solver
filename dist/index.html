@@ -7,8 +7,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <script type="module" crossorigin src="/assets/index-Bf4wVH0w.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-CwxxjUq7.css">
+  <script type="module" crossorigin src="/assets/index-DWd_TP62.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-DESGND5T.css">
 </head>
 <body>
     <div id="app">
@@ -32,6 +32,10 @@
 
             <main class="main-content">
                 <div class="cube-section">
+                    <div class="cube-header">
+                        <h2 class="cube-title">🎲 Real-time Cube Visualization</h2>
+                        <button class="realtime-toggle" id="realtime-toggle">📹 Real-time OFF</button>
+                    </div>
                     <div class="cube-container">
                         <div id="cube-3d"></div>
                         <div class="cube-controls">
@@ -117,6 +121,17 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Facts Section -->
+            <div class="facts-section">
+                <div class="facts-header">
+                    <h2 class="facts-title">🧩 Rubik's Cube Facts</h2>
+                    <p class="facts-subtitle">Discover amazing facts about the world's most popular puzzle</p>
+                </div>
+                <div class="facts-grid">
+                    <!-- Facts will be populated by JavaScript -->
+                </div>
+            </div>
         </div>
 
         <!-- Camera Modal -->
@@ -141,6 +156,8 @@
         <div class="move-overlay">
             <div class="current-move">R</div>
             <div class="move-description">Right face clockwise</div>
+            <div class="hand-gesture">👉 Thumb up, turn right</div>
+            <div class="hand-gesture">👉 Thumb up, turn right</div>
         </div>
 
         <div class="background-animation">
