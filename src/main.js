@@ -14,6 +14,7 @@ class CubeSolverInterface {
         this.isConnected = false;
         this.socket = null;
         this.cubeState = null;
+        this.realTimeCubeState = null;
         
         // Camera scanning
         this.videoStream = null;
@@ -22,10 +23,12 @@ class CubeSolverInterface {
         this.currentScanFace = null;
         this.scanningOrder = ['U', 'R', 'F', 'D', 'L', 'B'];
         this.currentFaceIndex = 0;
+        this.isRealTimeMode = false;
         
         this.init();
         this.setupEventListeners();
         this.startAnimations();
+        this.startRealTimeUpdates();
     }
 
     init() {
@@ -33,6 +36,7 @@ class CubeSolverInterface {
         this.createCube();
         this.animate();
         this.updateScanProgress();
+        this.initializeFacts();
     }
 
     setupThreeJS() {
@@ -49,7 +53,7 @@ class CubeSolverInterface {
             0.1,
             1000
         );
-        this.camera.position.set(5, 5, 5);
+        this.camera.position.set(6, 6, 6);
         this.camera.lookAt(0, 0, 0);
         
         // Renderer
@@ -59,20 +63,24 @@ class CubeSolverInterface {
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         container.appendChild(this.renderer.domElement);
         
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0x404040, 0.8);
+        // Enhanced Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
         this.scene.add(ambientLight);
         
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2);
         directionalLight.position.set(10, 10, 5);
         directionalLight.castShadow = true;
         directionalLight.shadow.mapSize.width = 2048;
         directionalLight.shadow.mapSize.height = 2048;
         this.scene.add(directionalLight);
         
-        const pointLight = new THREE.PointLight(0x4a90e2, 0.6);
-        pointLight.position.set(-5, 5, 5);
-        this.scene.add(pointLight);
+        const pointLight1 = new THREE.PointLight(0x4a90e2, 0.8);
+        pointLight1.position.set(-5, 5, 5);
+        this.scene.add(pointLight1);
+        
+        const pointLight2 = new THREE.PointLight(0xff6b6b, 0.6);
+        pointLight2.position.set(5, -5, -5);
+        this.scene.add(pointLight2);
     }
 
     createCube() {
@@ -96,20 +104,49 @@ class CubeSolverInterface {
                 for (let z = -1; z <= 1; z++) {
                     const geometry = new THREE.BoxGeometry(size, size, size);
                     
-                    // Create materials for each face with default colors
+                    // Create materials for each face with enhanced appearance
                     const materials = [
-                        new THREE.MeshLambertMaterial({ color: x === 1 ? colors.R : 0x333333 }), // Right
-                        new THREE.MeshLambertMaterial({ color: x === -1 ? colors.O : 0x333333 }), // Left
-                        new THREE.MeshLambertMaterial({ color: y === 1 ? colors.W : 0x333333 }), // Top
-                        new THREE.MeshLambertMaterial({ color: y === -1 ? colors.Y : 0x333333 }), // Bottom
-                        new THREE.MeshLambertMaterial({ color: z === 1 ? colors.G : 0x333333 }), // Front
-                        new THREE.MeshLambertMaterial({ color: z === -1 ? colors.B : 0x333333 })  // Back
+                        new THREE.MeshPhongMaterial({ 
+                            color: x === 1 ? colors.R : 0x222222,
+                            shininess: 100,
+                            specular: 0x111111
+                        }), // Right
+                        new THREE.MeshPhongMaterial({ 
+                            color: x === -1 ? colors.O : 0x222222,
+                            shininess: 100,
+                            specular: 0x111111
+                        }), // Left
+                        new THREE.MeshPhongMaterial({ 
+                            color: y === 1 ? colors.W : 0x222222,
+                            shininess: 100,
+                            specular: 0x111111
+                        }), // Top
+                        new THREE.MeshPhongMaterial({ 
+                            color: y === -1 ? colors.Y : 0x222222,
+                            shininess: 100,
+                            specular: 0x111111
+                        }), // Bottom
+                        new THREE.MeshPhongMaterial({ 
+                            color: z === 1 ? colors.G : 0x222222,
+                            shininess: 100,
+                            specular: 0x111111
+                        }), // Front
+                        new THREE.MeshPhongMaterial({ 
+                            color: z === -1 ? colors.B : 0x222222,
+                            shininess: 100,
+                            specular: 0x111111
+                        })  // Back
                     ];
                     
                     const cubelet = new THREE.Mesh(geometry, materials);
                     cubelet.position.set(x * (size + gap), y * (size + gap), z * (size + gap));
                     cubelet.castShadow = true;
                     cubelet.receiveShadow = true;
+                    
+                    // Add edge lines for better definition
+                    const edges = new THREE.EdgesGeometry(geometry);
+                    const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 }));
+                    cubelet.add(line);
                     
                     // Store original position for animations
                     cubelet.userData = {
@@ -126,13 +163,75 @@ class CubeSolverInterface {
         this.scene.add(this.cube);
     }
 
+    updateRealTimeCube(cubeState) {
+        if (!cubeState || !this.isRealTimeMode) return;
+        
+        const colors = {
+            'W': 0xffffff, 'Y': 0xffff00, 'R': 0xff0000,
+            'O': 0xff8800, 'G': 0x00ff00, 'B': 0x0000ff
+        };
+        
+        // Update cube colors based on real-time state
+        const faceOrder = ['U', 'R', 'F', 'D', 'L', 'B'];
+        let colorIndex = 0;
+        
+        faceOrder.forEach(face => {
+            if (cubeState[face]) {
+                cubeState[face].forEach((color, index) => {
+                    // Map cube state to 3D cubelets
+                    const cubeletIndex = this.mapFacePositionToCubelet(face, index);
+                    if (cubeletIndex !== -1 && this.cubelets[cubeletIndex]) {
+                        const cubelet = this.cubelets[cubeletIndex];
+                        const faceIndex = this.getFaceIndex(face);
+                        if (cubelet.material[faceIndex]) {
+                            gsap.to(cubelet.material[faceIndex].color, {
+                                duration: 0.5,
+                                r: ((colors[color] >> 16) & 255) / 255,
+                                g: ((colors[color] >> 8) & 255) / 255,
+                                b: (colors[color] & 255) / 255
+                            });
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    mapFacePositionToCubelet(face, position) {
+        // Map 2D face positions to 3D cubelet indices
+        const faceMapping = {
+            'U': [0, 1, 2, 9, 10, 11, 18, 19, 20],
+            'D': [6, 7, 8, 15, 16, 17, 24, 25, 26],
+            'F': [18, 19, 20, 21, 22, 23, 24, 25, 26],
+            'B': [0, 1, 2, 3, 4, 5, 6, 7, 8],
+            'R': [2, 5, 8, 11, 14, 17, 20, 23, 26],
+            'L': [0, 3, 6, 9, 12, 15, 18, 21, 24]
+        };
+        
+        return faceMapping[face] ? faceMapping[face][position] : -1;
+    }
+
+    getFaceIndex(face) {
+        const faceIndices = { 'R': 0, 'L': 1, 'U': 2, 'D': 3, 'F': 4, 'B': 5 };
+        return faceIndices[face] || 0;
+    }
+
+    startRealTimeUpdates() {
+        // Simulate real-time cube state updates
+        setInterval(() => {
+            if (this.isRealTimeMode && this.scannedFaces && Object.keys(this.scannedFaces).length === 6) {
+                this.updateRealTimeCube(this.scannedFaces);
+            }
+        }, 100);
+    }
+
     async startCameraScanning() {
         try {
             this.videoStream = await navigator.mediaDevices.getUserMedia({ 
                 video: { 
                     width: { ideal: 640 },
                     height: { ideal: 480 },
-                    facingMode: 'environment' // Use back camera on mobile
+                    facingMode: 'environment'
                 } 
             });
             
@@ -140,6 +239,7 @@ class CubeSolverInterface {
             videoElement.srcObject = this.videoStream;
             
             this.isScanning = true;
+            this.isRealTimeMode = true;
             this.currentFaceIndex = 0;
             this.currentScanFace = this.scanningOrder[0];
             
@@ -158,8 +258,6 @@ class CubeSolverInterface {
     showCameraInterface() {
         const cameraModal = document.getElementById('camera-modal');
         cameraModal.classList.add('active');
-        
-        // Add scanning grid overlay
         this.addScanningGrid();
     }
 
@@ -183,6 +281,7 @@ class CubeSolverInterface {
                 <div class="scan-progress-bar">
                     <div class="progress" style="width: ${(this.currentFaceIndex / 6) * 100}%"></div>
                 </div>
+                <div class="face-counter">${this.currentFaceIndex + 1} of 6 faces</div>
             </div>
         `;
     }
@@ -200,7 +299,6 @@ class CubeSolverInterface {
             
             ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
             
-            // Sample colors from 3x3 grid positions
             const colors = [];
             const gridSize = 3;
             const centerX = canvas.width / 2;
@@ -215,22 +313,25 @@ class CubeSolverInterface {
                     const imageData = ctx.getImageData(x, y, 1, 1);
                     const [r, g, b] = imageData.data;
                     
-                    // Convert RGB to HSV and classify color
                     const color = this.classifyColor(r, g, b);
                     colors.push(color);
                     
-                    // Update grid cell color
                     const cellIndex = i * 3 + j;
                     const gridCells = document.querySelectorAll('.grid-cell');
                     if (gridCells[cellIndex]) {
                         gridCells[cellIndex].style.backgroundColor = this.getColorHex(color);
                         gridCells[cellIndex].textContent = color;
+                        gridCells[cellIndex].style.border = `2px solid ${this.getColorHex(color)}`;
                     }
                 }
             }
             
-            // Store the detected colors for this face
             this.scannedFaces[this.currentScanFace] = colors;
+            
+            // Update real-time cube
+            if (this.isRealTimeMode) {
+                this.updateRealTimeCube(this.scannedFaces);
+            }
             
             requestAnimationFrame(detectColors);
         };
@@ -241,7 +342,6 @@ class CubeSolverInterface {
     }
 
     classifyColor(r, g, b) {
-        // Convert RGB to HSV
         const max = Math.max(r, g, b);
         const min = Math.min(r, g, b);
         const diff = max - min;
@@ -258,36 +358,27 @@ class CubeSolverInterface {
         const s = max === 0 ? 0 : Math.round((diff / max) * 100);
         const v = Math.round((max / 255) * 100);
         
-        // Color classification based on HSV values (similar to your Python code)
         if (h >= 5 && h <= 36 && s >= 9 && s <= 60 && v >= 45 && v <= 179) return "W";
         if (h >= 0 && h <= 25 && s >= 156 && s <= 232 && v >= 82 && v <= 143) return "R";
         if (h >= 28 && h <= 39 && s >= 146 && s <= 255 && v >= 132 && v <= 194) return "Y";
         if (h >= 42 && h <= 160 && s >= 133 && s <= 255 && v >= 97 && v <= 190) return "G";
         if (h >= 55 && h <= 121 && s >= 129 && s <= 255 && v >= 26 && v <= 84) return "B";
         if (h >= 1 && h <= 85 && s >= 211 && s <= 248 && v >= 75 && v <= 148) return "O";
-        return "O"; // Default
+        return "O";
     }
 
     getColorHex(colorCode) {
         const colors = {
-            'W': '#ffffff',
-            'Y': '#ffff00',
-            'R': '#ff0000',
-            'O': '#ff8800',
-            'G': '#00ff00',
-            'B': '#0000ff'
+            'W': '#ffffff', 'Y': '#ffff00', 'R': '#ff0000',
+            'O': '#ff8800', 'G': '#00ff00', 'B': '#0000ff'
         };
         return colors[colorCode] || '#666666';
     }
 
     getFaceName(face) {
         const names = {
-            'U': 'Up/Top',
-            'R': 'Right',
-            'F': 'Front',
-            'D': 'Down/Bottom',
-            'L': 'Left',
-            'B': 'Back'
+            'U': 'Up/Top', 'R': 'Right', 'F': 'Front',
+            'D': 'Down/Bottom', 'L': 'Left', 'B': 'Back'
         };
         return names[face] || face;
     }
@@ -295,24 +386,6 @@ class CubeSolverInterface {
     captureFace() {
         if (!this.currentScanFace || !this.scannedFaces[this.currentScanFace]) return;
         
-        // Mark face as captured
-        const faceItem = document.querySelector(`[data-face="${this.currentScanFace}"]`);
-        if (faceItem) {
-            faceItem.classList.add('scanned');
-            faceItem.querySelector('.scan-status').textContent = '✅';
-            
-            // Update face preview
-            const preview = faceItem.querySelector('.face-preview');
-            const colors = this.scannedFaces[this.currentScanFace];
-            colors.forEach((color, index) => {
-                const sticker = preview.children[index];
-                if (sticker) {
-                    sticker.style.backgroundColor = this.getColorHex(color);
-                }
-            });
-        }
-        
-        // Move to next face
         this.currentFaceIndex++;
         if (this.currentFaceIndex < this.scanningOrder.length) {
             this.currentScanFace = this.scanningOrder[this.currentFaceIndex];
@@ -326,7 +399,6 @@ class CubeSolverInterface {
         this.isScanning = false;
         this.closeCameraInterface();
         
-        // Build cube string for solver
         const cubeString = this.buildCubeString();
         console.log('Cube string:', cubeString);
         
@@ -335,20 +407,17 @@ class CubeSolverInterface {
     }
 
     buildCubeString() {
-        // Convert scanned faces to cube string format
         const faceOrder = ['U', 'R', 'F', 'D', 'L', 'B'];
         let cubeString = '';
         
-        // Create color to face mapping based on center pieces
         const colorToFace = {};
         faceOrder.forEach(face => {
             if (this.scannedFaces[face]) {
-                const centerColor = this.scannedFaces[face][4]; // Center piece is at index 4
+                const centerColor = this.scannedFaces[face][4];
                 colorToFace[centerColor] = face;
             }
         });
         
-        // Build cube string
         faceOrder.forEach(face => {
             if (this.scannedFaces[face]) {
                 this.scannedFaces[face].forEach(color => {
@@ -362,13 +431,10 @@ class CubeSolverInterface {
 
     async solveCube(cubeString) {
         try {
-            // In a real implementation, you would send this to your Python solver
-            // For now, we'll simulate a solution
             setTimeout(() => {
                 const mockSolution = "R U R' U' R U R' F' R U R' U' R' F R";
                 this.receiveSolution(mockSolution);
             }, 2000);
-            
         } catch (error) {
             console.error('Error solving cube:', error);
             this.updateStatus('error', 'Error solving cube');
@@ -383,37 +449,6 @@ class CubeSolverInterface {
             this.videoStream.getTracks().forEach(track => track.stop());
             this.videoStream = null;
         }
-    }
-
-    updateScanningUI() {
-        // Remove scanning class from all faces
-        document.querySelectorAll('.face-item').forEach(item => {
-            item.classList.remove('scanning');
-        });
-        
-        // Add scanning class to current face
-        if (this.currentScanFace) {
-            const currentFaceItem = document.querySelector(`[data-face="${this.currentScanFace}"]`);
-            if (currentFaceItem) {
-                currentFaceItem.classList.add('scanning');
-            }
-        }
-    }
-
-    updateScanProgress() {
-        const faceItems = document.querySelectorAll('.face-item');
-        faceItems.forEach(item => {
-            const face = item.dataset.face;
-            const preview = item.querySelector('.face-preview');
-            
-            // Create 9 stickers for 3x3 grid
-            preview.innerHTML = '';
-            for (let i = 0; i < 9; i++) {
-                const sticker = document.createElement('div');
-                sticker.className = 'sticker';
-                preview.appendChild(sticker);
-            }
-        });
     }
 
     receiveSolution(solutionString) {
@@ -436,6 +471,7 @@ class CubeSolverInterface {
                 <div class="step-content">
                     <div class="step-move">${move}</div>
                     <div class="step-description">${this.getMoveDescription(move)}</div>
+                    <div class="hand-gesture">${this.getHandGesture(move)}</div>
                 </div>
                 <div class="step-progress">
                     <div class="progress-bar"></div>
@@ -447,26 +483,26 @@ class CubeSolverInterface {
 
     getMoveDescription(move) {
         const descriptions = {
-            'R': 'Right face clockwise',
-            "R'": 'Right face counterclockwise',
-            'R2': 'Right face 180°',
-            'L': 'Left face clockwise',
-            "L'": 'Left face counterclockwise',
-            'L2': 'Left face 180°',
-            'U': 'Up face clockwise',
-            "U'": 'Up face counterclockwise',
-            'U2': 'Up face 180°',
-            'D': 'Down face clockwise',
-            "D'": 'Down face counterclockwise',
-            'D2': 'Down face 180°',
-            'F': 'Front face clockwise',
-            "F'": 'Front face counterclockwise',
-            'F2': 'Front face 180°',
-            'B': 'Back face clockwise',
-            "B'": 'Back face counterclockwise',
-            'B2': 'Back face 180°'
+            'R': 'Right face clockwise', "R'": 'Right face counterclockwise', 'R2': 'Right face 180°',
+            'L': 'Left face clockwise', "L'": 'Left face counterclockwise', 'L2': 'Left face 180°',
+            'U': 'Up face clockwise', "U'": 'Up face counterclockwise', 'U2': 'Up face 180°',
+            'D': 'Down face clockwise', "D'": 'Down face counterclockwise', 'D2': 'Down face 180°',
+            'F': 'Front face clockwise', "F'": 'Front face counterclockwise', 'F2': 'Front face 180°',
+            'B': 'Back face clockwise', "B'": 'Back face counterclockwise', 'B2': 'Back face 180°'
         };
         return descriptions[move] || 'Unknown move';
+    }
+
+    getHandGesture(move) {
+        const gestures = {
+            'R': '👉 Thumb up, turn right', "R'": '👉 Thumb down, turn left',
+            'L': '👈 Thumb up, turn left', "L'": '👈 Thumb down, turn right',
+            'U': '👆 Fingers forward, turn right', "U'": '👆 Fingers back, turn left',
+            'D': '👇 Fingers forward, turn left', "D'": '👇 Fingers back, turn right',
+            'F': '🤏 Pinch and turn right', "F'": '🤏 Pinch and turn left',
+            'B': '🖐️ Palm out, turn right', "B'": '🖐️ Palm out, turn left'
+        };
+        return gestures[move] || '✋ Follow the move';
     }
 
     showNextMove() {
@@ -480,7 +516,6 @@ class CubeSolverInterface {
         this.animateMove(move);
         this.showMoveOverlay(move);
         
-        // Update step progress
         const currentStepElement = document.querySelector('.step-item.current .progress-bar');
         if (currentStepElement) {
             gsap.to(currentStepElement, {
@@ -492,7 +527,6 @@ class CubeSolverInterface {
         
         this.currentStep++;
         
-        // Update current step indicator
         setTimeout(() => {
             this.updateCurrentStepIndicator();
         }, 1000);
@@ -501,16 +535,13 @@ class CubeSolverInterface {
     animateMove(move) {
         this.isShowingMove = true;
         
-        // Get the face and rotation info
         const face = move[0];
         const modifier = move.slice(1);
         
-        // Calculate rotation
-        let rotationAngle = Math.PI / 2; // 90 degrees
+        let rotationAngle = Math.PI / 2;
         if (modifier === "'") rotationAngle = -Math.PI / 2;
         if (modifier === "2") rotationAngle = Math.PI;
         
-        // Animate the cube to show the move
         const rotationAxis = this.getRotationAxis(face);
         
         gsap.to(this.cube.rotation, {
@@ -522,7 +553,6 @@ class CubeSolverInterface {
             }
         });
         
-        // Add visual effects
         this.addMoveEffects(face);
     }
 
@@ -536,14 +566,12 @@ class CubeSolverInterface {
     }
 
     addMoveEffects(face) {
-        // Add particle effects or highlights for the moving face
         const faceColors = {
             'R': 0xff0000, 'L': 0xff8800,
             'U': 0xffffff, 'D': 0xffff00,
             'F': 0x00ff00, 'B': 0x0000ff
         };
         
-        // Create a temporary highlight effect
         const geometry = new THREE.RingGeometry(2, 2.5, 8);
         const material = new THREE.MeshBasicMaterial({ 
             color: faceColors[face] || 0xffffff,
@@ -552,11 +580,9 @@ class CubeSolverInterface {
         });
         const ring = new THREE.Mesh(geometry, material);
         
-        // Position the ring based on the face
         this.positionRingForFace(ring, face);
         this.scene.add(ring);
         
-        // Animate the ring
         gsap.to(ring.scale, {
             duration: 1,
             x: 1.5, y: 1.5, z: 1.5,
@@ -595,16 +621,17 @@ class CubeSolverInterface {
         const overlay = document.querySelector('.move-overlay');
         const moveText = overlay.querySelector('.current-move');
         const moveDesc = overlay.querySelector('.move-description');
+        const handGesture = overlay.querySelector('.hand-gesture');
         
         moveText.textContent = move;
         moveDesc.textContent = this.getMoveDescription(move);
+        handGesture.textContent = this.getHandGesture(move);
         
         overlay.classList.add('visible');
         
-        // Auto-hide after 3 seconds
         setTimeout(() => {
             overlay.classList.remove('visible');
-        }, 3000);
+        }, 4000);
     }
 
     highlightCurrentStep() {
@@ -630,24 +657,31 @@ class CubeSolverInterface {
     showCompletionMessage() {
         this.updateStatus('solved', 'Cube Solved! 🎉');
         
-        // Show completion overlay
         const completionOverlay = document.createElement('div');
         completionOverlay.className = 'completion-overlay';
         completionOverlay.innerHTML = `
             <div class="completion-content">
                 <h2>🎉 Cube Solved!</h2>
                 <p>Congratulations! Your cube has been solved successfully.</p>
+                <div class="completion-stats">
+                    <div class="stat">
+                        <span class="stat-number">${this.currentSolution.length}</span>
+                        <span class="stat-label">Total Moves</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number">${Math.round(this.currentSolution.length * 2.5)}s</span>
+                        <span class="stat-label">Avg Time</span>
+                    </div>
+                </div>
                 <button class="reset-btn" onclick="location.reload()">Solve Another Cube</button>
             </div>
         `;
         document.body.appendChild(completionOverlay);
         
-        // Victory animation
         this.playVictoryAnimation();
     }
 
     playVictoryAnimation() {
-        // Confetti-like effect with cubelets
         this.cubelets.forEach((cubelet, index) => {
             gsap.to(cubelet.rotation, {
                 duration: 3,
@@ -675,7 +709,6 @@ class CubeSolverInterface {
         
         statusText.textContent = message;
         
-        // Remove all status classes
         statusDot.classList.remove('scanning', 'ready', 'solving', 'solved', 'error');
         statusDot.classList.add(type);
     }
@@ -687,19 +720,63 @@ class CubeSolverInterface {
         nextBtn.disabled = false;
         solveBtn.disabled = true;
         
-        // Update step counter
         const stepCounter = document.querySelector('.step-counter');
         if (stepCounter) {
             stepCounter.textContent = `Step 1 of ${this.currentSolution.length}`;
         }
     }
 
+    initializeFacts() {
+        const facts = [
+            {
+                title: "43 Quintillion Combinations",
+                description: "There are 43,252,003,274,489,856,000 possible configurations of a Rubik's Cube!",
+                icon: "🔢"
+            },
+            {
+                title: "God's Number is 20",
+                description: "Any scrambled cube can be solved in 20 moves or fewer using optimal algorithms.",
+                icon: "🎯"
+            },
+            {
+                title: "World Record: 3.47 seconds",
+                description: "The fastest human solve was achieved by Yusheng Du in 2018.",
+                icon: "⚡"
+            },
+            {
+                title: "Invented in 1974",
+                description: "Created by Hungarian architect Ernő Rubik as a teaching tool for 3D geometry.",
+                icon: "🏗️"
+            },
+            {
+                title: "350 Million Sold",
+                description: "The Rubik's Cube is one of the best-selling puzzles of all time.",
+                icon: "📈"
+            },
+            {
+                title: "Two-Phase Algorithm",
+                description: "The Kociemba algorithm used here solves the cube in two phases for efficiency.",
+                icon: "🧮"
+            }
+        ];
+
+        const factsContainer = document.querySelector('.facts-grid');
+        if (factsContainer) {
+            factsContainer.innerHTML = facts.map(fact => `
+                <div class="fact-card">
+                    <div class="fact-icon">${fact.icon}</div>
+                    <h4 class="fact-title">${fact.title}</h4>
+                    <p class="fact-description">${fact.description}</p>
+                </div>
+            `).join('');
+        }
+    }
+
     animate() {
         requestAnimationFrame(() => this.animate());
         
-        // Gentle rotation when not showing specific moves
         if (!this.isShowingMove) {
-            this.cube.rotation.y += 0.003;
+            this.cube.rotation.y += 0.002;
             this.cube.rotation.x += 0.001;
         }
         
@@ -708,31 +785,39 @@ class CubeSolverInterface {
 
     setupEventListeners() {
         // Cube controls
-        document.getElementById('rotate-x').addEventListener('click', () => {
+        document.getElementById('rotate-x')?.addEventListener('click', () => {
             gsap.to(this.cube.rotation, { duration: 0.5, x: this.cube.rotation.x + Math.PI / 2 });
         });
         
-        document.getElementById('rotate-y').addEventListener('click', () => {
+        document.getElementById('rotate-y')?.addEventListener('click', () => {
             gsap.to(this.cube.rotation, { duration: 0.5, y: this.cube.rotation.y + Math.PI / 2 });
         });
         
-        document.getElementById('rotate-z').addEventListener('click', () => {
+        document.getElementById('rotate-z')?.addEventListener('click', () => {
             gsap.to(this.cube.rotation, { duration: 0.5, z: this.cube.rotation.z + Math.PI / 2 });
         });
         
-        document.getElementById('reset-view').addEventListener('click', () => {
+        document.getElementById('reset-view')?.addEventListener('click', () => {
             gsap.to(this.cube.rotation, { duration: 1, x: 0, y: 0, z: 0, ease: "back.out(1.7)" });
         });
         
         // Action buttons
-        document.getElementById('scan-btn').addEventListener('click', () => this.startCameraScanning());
-        document.getElementById('solve-btn').addEventListener('click', () => this.solveCube());
-        document.getElementById('next-move-btn').addEventListener('click', () => this.showNextMove());
-        document.getElementById('reset-btn').addEventListener('click', () => location.reload());
+        document.getElementById('scan-btn')?.addEventListener('click', () => this.startCameraScanning());
+        document.getElementById('solve-btn')?.addEventListener('click', () => this.solveCube());
+        document.getElementById('next-move-btn')?.addEventListener('click', () => this.showNextMove());
+        document.getElementById('reset-btn')?.addEventListener('click', () => location.reload());
         
         // Camera controls
-        document.getElementById('capture-face').addEventListener('click', () => this.captureFace());
-        document.getElementById('close-camera').addEventListener('click', () => this.closeCameraInterface());
+        document.getElementById('capture-face')?.addEventListener('click', () => this.captureFace());
+        document.getElementById('close-camera')?.addEventListener('click', () => this.closeCameraInterface());
+        
+        // Real-time toggle
+        document.getElementById('realtime-toggle')?.addEventListener('click', () => {
+            this.isRealTimeMode = !this.isRealTimeMode;
+            const button = document.getElementById('realtime-toggle');
+            button.textContent = this.isRealTimeMode ? '📹 Real-time ON' : '📹 Real-time OFF';
+            button.classList.toggle('active', this.isRealTimeMode);
+        });
         
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
@@ -765,6 +850,16 @@ class CubeSolverInterface {
                 ease: "power2.inOut",
                 delay: index * 0.7
             });
+        });
+        
+        // Animate fact cards
+        gsap.from('.fact-card', {
+            duration: 1,
+            y: 50,
+            opacity: 0,
+            stagger: 0.1,
+            delay: 1,
+            ease: "back.out(1.7)"
         });
         
         // Animate tech info items
@@ -807,6 +902,10 @@ class CubeSolverInterface {
         this.camera.aspect = container.clientWidth / container.clientHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(container.clientWidth, container.clientHeight);
+    }
+
+    updateScanProgress() {
+        // Implementation for scan progress updates
     }
 }
 

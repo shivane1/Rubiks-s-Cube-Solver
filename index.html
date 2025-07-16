@@ -30,6 +30,10 @@
 
             <main class="main-content">
                 <div class="cube-section">
+                    <div class="cube-header">
+                        <h2 class="cube-title">🎲 Real-time Cube Visualization</h2>
+                        <button class="realtime-toggle" id="realtime-toggle">📹 Real-time OFF</button>
+                    </div>
                     <div class="cube-container">
                         <div id="cube-3d"></div>
                         <div class="cube-controls">
@@ -43,22 +47,26 @@
 
                 <div class="info-section">
                     <div class="instructions-panel">
-                        <h3>📋 Instructions</h3>
+                        <h3>📋 How to Use</h3>
                         <div class="instruction-item">
                             <div class="instruction-icon">1</div>
-                            <span>Run your OpenCV Python solver (Main.py)</span>
+                            <span>Click "Scan Cube" to open camera and scan your physical cube</span>
                         </div>
                         <div class="instruction-item">
                             <div class="instruction-icon">2</div>
-                            <span>Scan your cube using the camera interface</span>
+                            <span>Align each face with the 3x3 grid and capture all 6 faces</span>
                         </div>
                         <div class="instruction-item">
                             <div class="instruction-icon">3</div>
-                            <span>Click "Next Move" or press SPACE to see each step</span>
+                            <span>Watch the real-time 3D cube update as you scan</span>
                         </div>
                         <div class="instruction-item">
                             <div class="instruction-icon">4</div>
-                            <span>Follow the visual move guidance to solve your cube</span>
+                            <span>Follow step-by-step moves with hand gesture guidance</span>
+                        </div>
+                        <div class="instruction-item">
+                            <div class="instruction-icon">5</div>
+                            <span>Use SPACE key to advance through solving steps</span>
                         </div>
                     </div>
 
@@ -74,13 +82,13 @@
                 </div>
             </main>
             <div class="action-bar">
-                <button class="action-btn primary" id="scan-btn">
+                <button class="action-btn primary" id="scan-cube-btn">
                     <span class="btn-icon">📷</span>
-                    Scan Cube with Camera
+                    Scan Cube
                 </button>
-                <button class="action-btn secondary" id="solve-btn" disabled>
+                <button class="action-btn secondary" id="auto-solve-btn" disabled>
                     <span class="btn-icon">🧮</span>
-                    Solve Cube
+                    Auto Solve
                 </button>
                 <button class="action-btn primary" id="next-move-btn" disabled>
                     <span class="btn-icon">▶️</span>
@@ -92,6 +100,18 @@
                 </button>
             </div>
 
+            <!-- Facts Section -->
+            <div class="facts-section">
+                <div class="facts-header">
+                    <h2 class="facts-title">🧩 Rubik's Cube Facts</h2>
+                    <p class="facts-subtitle">Discover amazing facts about the world's most popular puzzle</p>
+                </div>
+                <div class="facts-grid">
+                    <!-- Facts will be populated by JavaScript -->
+                </div>
+            </div>
+
+            <!-- Tech Info Section -->
             <div class="tech-info">
                 <div class="tech-item">
                     <div class="tech-icon">🎥</div>
@@ -139,6 +159,7 @@
         <div class="move-overlay">
             <div class="current-move">R</div>
             <div class="move-description">Right face clockwise</div>
+            <div class="hand-gesture">👉 Thumb up, turn right</div>
         </div>
 
         <div class="background-animation">
